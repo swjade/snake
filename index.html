@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贪食蛇</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <main class="app-shell">
+        <section class="hero-panel">
+            <p class="eyebrow">Default Mode</p>
+            <h1>贪食蛇</h1>
+            <p class="hero-copy">
+                控制玩家蛇在场地中移动，吃到绿色道具增长身体，吃到黄色道具获得临时加速，
+                吃到蓝色道具后会在 3 秒内持续发射子弹。场上始终有 8 条分档 NPC 蛇参与对抗。
+            </p>
+
+            <div class="legend">
+                <div class="legend-item">
+                    <span class="legend-chip grow"></span>
+                    <span>加长道具：+1 分，增长 1 格</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-chip boost"></span>
+                    <span>加速道具：+2 分，速度提升 30%，持续 5 秒，可突破速度上限</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-chip bullet"></span>
+                    <span>子弹道具：+2 分，持续 3 秒自动发射黑色五角星子弹</span>
+                </div>
+            </div>
+
+            <div class="controls-card">
+                <h2>操作说明</h2>
+                <p>使用 W / A / S / D 输入绝对方向，系统会根据蛇当前朝向自动解释为前进、左转、右转或无效输入。</p>
+                <p>当前默认模式中包含 8 条 NPC 蛇：傻瓜档 3 条、标准档 3 条、高手档 2 条。</p>
+                <ul>
+                    <li>W：场地上</li>
+                    <li>A：场地左</li>
+                    <li>S：场地下</li>
+                    <li>D：场地右</li>
+                </ul>
+            </div>
+        </section>
+
+        <section class="game-panel">
+            <header class="hud">
+                <div class="hud-card">
+                    <span class="hud-label">状态</span>
+                    <strong id="statusText">待开始</strong>
+                </div>
+                <div class="hud-card">
+                    <span class="hud-label">分数</span>
+                    <strong id="scoreText">0</strong>
+                </div>
+                <div class="hud-card">
+                    <span class="hud-label">速度</span>
+                    <strong id="speedText">1.00x</strong>
+                </div>
+                <div class="hud-card">
+                    <span class="hud-label">加速剩余</span>
+                    <strong id="boostText">0.0s</strong>
+                </div>
+            </header>
+
+            <div class="action-row">
+                <button id="startButton" class="action-button primary">开始游戏</button>
+                <button id="pauseButton" class="action-button" disabled>暂停</button>
+                <button id="resumeButton" class="action-button" disabled>继续</button>
+                <button id="restartButton" class="action-button" disabled>重新开始</button>
+                <button id="exitButton" class="action-button" disabled>退出</button>
+            </div>
+
+            <div class="board-frame">
+                <canvas id="gameCanvas" width="700" height="700" aria-label="贪食蛇游戏场地"></canvas>
+                <div id="overlay" class="overlay visible" aria-live="polite">
+                    <div class="overlay-card">
+                        <p class="overlay-kicker" id="overlayKicker">Ready</p>
+                        <h2 id="overlayTitle">准备开始</h2>
+                        <p id="overlayBody">点击“开始游戏”进入默认模式。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
