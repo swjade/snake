@@ -23,9 +23,9 @@
 
 ## 生成的访问地址
 
-如果你的 GitHub 用户名是 `USERNAME`，仓库名是 `snake`，则外网链接通常是：
+如果你的 GitHub 用户名是 `swjade`，仓库名是 `snake`，则外网链接通常是：
 
-`https://USERNAME.github.io/snake/`
+`https://swjade.github.io/snake/`
 
 ## 说明
 
