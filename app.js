@@ -371,6 +371,7 @@ function stepReadySnakes(readySnakes) {
             nextHead,
             item,
             willGrow: item?.type === "grow",
+            ignoredCollisionSnakeIds: [],
             canceled: false,
         };
     });
@@ -424,6 +425,7 @@ function resolveHeadOnCollisions(plans) {
             const winner = currentLength > otherLength ? current : other;
             const loser = winner === current ? other : current;
             loser.canceled = true;
+            winner.ignoredCollisionSnakeIds.push(loser.snake.id);
             handleSnakeDeath(loser.snake, { type: "head-on", target: winner.snake });
             if (game.state !== "running") {
                 return;
@@ -551,7 +553,7 @@ function stepSnake(snake, plan = null) {
     const nextHead = plan?.nextHead ?? getNextPosition(snake.segments[0], nextDirection);
     const item = plan?.item ?? getItemAt(nextHead);
     const willGrow = plan?.willGrow ?? item?.type === "grow";
-    const collision = detectSnakeCollision(snake, nextHead, willGrow);
+    const collision = detectSnakeCollision(snake, nextHead, willGrow, plan?.ignoredCollisionSnakeIds ?? []);
 
     if (collision) {
         handleSnakeDeath(snake, collision);
@@ -572,7 +574,7 @@ function stepSnake(snake, plan = null) {
     }
 }
 
-function detectSnakeCollision(snake, nextHead, willGrow) {
+function detectSnakeCollision(snake, nextHead, willGrow, ignoreSnakeIds = []) {
     if (isOutOfBounds(nextHead)) {
         return { type: "wall" };
     }
@@ -584,6 +586,10 @@ function detectSnakeCollision(snake, nextHead, willGrow) {
 
     for (const otherSnake of getAllSnakes()) {
         if (otherSnake.id === snake.id) {
+            continue;
+        }
+
+        if (ignoreSnakeIds.includes(otherSnake.id)) {
             continue;
         }
 
