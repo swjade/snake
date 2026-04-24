@@ -712,7 +712,6 @@ function handleSnakeDeath(snake, collision) {
     }
 
     removeNpcById(snake.id);
-    ensureNpcCount();
 }
 
 function resolvePlayerDirection() {
