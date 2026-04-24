@@ -957,6 +957,7 @@ function spawnBulletFromSnake(snake) {
         game.bullets.push({
             id: `bullet-${snake.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             ownerId: snake.id,
+            color: snake.colors.head,
             x: start.x,
             y: start.y,
             previousX: start.x,
@@ -1251,7 +1252,7 @@ function drawBullets(viewport) {
         const screenPosition = worldToScreen(getRenderedBulletPosition(bullet), viewport);
         const centerX = screenPosition.x + CELL_SIZE / 2;
         const centerY = screenPosition.y + CELL_SIZE / 2;
-        drawStar(centerX, centerY, CELL_SIZE * 0.34, CELL_SIZE * 0.16, 5, "#111111");
+        drawStar(centerX, centerY, CELL_SIZE * 0.34, CELL_SIZE * 0.16, 5, bullet.color ?? "#111111");
     }
 }
 
