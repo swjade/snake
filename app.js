@@ -27,6 +27,25 @@ const DIRECTION_VECTORS = {
     right: { x: 1, y: 0 },
 };
 
+const BULLET_DIRECTION_VECTORS = {
+    up: [
+        { x: -1, y: -1 },
+        { x: 1, y: -1 },
+    ],
+    down: [
+        { x: -1, y: 1 },
+        { x: 1, y: 1 },
+    ],
+    left: [
+        { x: -1, y: -1 },
+        { x: -1, y: 1 },
+    ],
+    right: [
+        { x: 1, y: -1 },
+        { x: 1, y: 1 },
+    ],
+};
+
 const LEFT_TURN = {
     up: "left",
     left: "down",
@@ -203,6 +222,7 @@ function createSnakeEntity(kind, index, tier) {
         kind,
         tier,
         segments: spawnData.segments,
+        previousSegments: cloneSegments(spawnData.segments),
         direction: spawnData.direction,
         pendingAbsoluteDirection: null,
         moveAccumulator: 0,
@@ -560,6 +580,7 @@ function stepSnake(snake, plan = null) {
         return;
     }
 
+    snake.previousSegments = cloneSegments(snake.segments);
     snake.direction = nextDirection;
     snake.straightSteps = nextDirection === currentDirection ? snake.straightSteps + 1 : 1;
     snake.segments.unshift(nextHead);
@@ -814,26 +835,31 @@ function spawnBulletFromSnake(snake) {
         return;
     }
 
-    const start = getNextPosition(snake.segments[0], snake.direction);
-    if (isOutOfBounds(start)) {
-        return;
-    }
+    const bulletVectors = BULLET_DIRECTION_VECTORS[snake.direction] ?? [];
+    for (const vector of bulletVectors) {
+        const start = getNextPosition(snake.segments[0], vector);
+        if (isOutOfBounds(start)) {
+            continue;
+        }
 
-    const hitSnake = getSnakeByPosition(start, snake.id);
-    if (hitSnake) {
-        applyBulletHit(hitSnake, snake);
-        return;
-    }
+        const hitSnake = getSnakeByPosition(start, snake.id);
+        if (hitSnake) {
+            applyBulletHit(hitSnake, snake);
+            continue;
+        }
 
-    game.bullets.push({
-        id: `bullet-${snake.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        ownerId: snake.id,
-        x: start.x,
-        y: start.y,
-        direction: snake.direction,
-        moveAccumulator: 0,
-        moveInterval: Math.max(20, getSnakeMoveInterval(snake) / 1.1),
-    });
+        game.bullets.push({
+            id: `bullet-${snake.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            ownerId: snake.id,
+            x: start.x,
+            y: start.y,
+            previousX: start.x,
+            previousY: start.y,
+            vector,
+            moveAccumulator: 0,
+            moveInterval: Math.max(20, getSnakeMoveInterval(snake) / 1.1),
+        });
+    }
 }
 
 function stepBullet(bullet) {
@@ -841,7 +867,7 @@ function stepBullet(bullet) {
         return;
     }
 
-    const nextPosition = getNextPosition(bullet, bullet.direction);
+    const nextPosition = getNextPosition(bullet, bullet.vector);
     if (isOutOfBounds(nextPosition)) {
         removeBulletById(bullet.id);
         return;
@@ -854,6 +880,8 @@ function stepBullet(bullet) {
         return;
     }
 
+    bullet.previousX = bullet.x;
+    bullet.previousY = bullet.y;
     bullet.x = nextPosition.x;
     bullet.y = nextPosition.y;
 }
@@ -978,7 +1006,7 @@ function getViewport() {
         };
     }
 
-    const head = game.player.segments[0];
+    const head = getRenderedSnakeSegments(game.player)[0] ?? game.player.segments[0];
     const halfViewport = Math.floor(VIEWPORT_CELLS / 2);
     const maxLeft = Math.max(0, BOARD_SIZE - VIEWPORT_CELLS);
     const maxTop = Math.max(0, BOARD_SIZE - VIEWPORT_CELLS);
@@ -1001,16 +1029,20 @@ function drawBoard(viewport) {
     context.strokeStyle = "rgba(36, 55, 41, 0.08)";
     context.lineWidth = 1;
 
-    for (let index = 0; index <= VIEWPORT_CELLS; index += 1) {
-        const offset = index * CELL_SIZE;
+    const offsetX = -getViewportFraction(viewport.left) * CELL_SIZE;
+    const offsetY = -getViewportFraction(viewport.top) * CELL_SIZE;
+
+    for (let index = 0; index <= VIEWPORT_CELLS + 1; index += 1) {
+        const x = offsetX + index * CELL_SIZE;
+        const y = offsetY + index * CELL_SIZE;
         context.beginPath();
-        context.moveTo(offset, 0);
-        context.lineTo(offset, CANVAS_SIZE);
+        context.moveTo(x, 0);
+        context.lineTo(x, CANVAS_SIZE);
         context.stroke();
 
         context.beginPath();
-        context.moveTo(0, offset);
-        context.lineTo(CANVAS_SIZE, offset);
+        context.moveTo(0, y);
+        context.lineTo(CANVAS_SIZE, y);
         context.stroke();
     }
 
@@ -1023,19 +1055,23 @@ function drawBoardBoundaries(viewport) {
     context.lineWidth = 4;
 
     if (viewport.left === 0) {
-        drawBoundaryLine(0, 0, 0, CANVAS_SIZE);
+        const leftX = worldToScreen({ x: 0, y: 0 }, viewport).x;
+        drawBoundaryLine(leftX, 0, leftX, CANVAS_SIZE);
     }
 
     if (viewport.right === BOARD_SIZE) {
-        drawBoundaryLine(CANVAS_SIZE, 0, CANVAS_SIZE, CANVAS_SIZE);
+        const rightX = worldToScreen({ x: BOARD_SIZE, y: 0 }, viewport).x;
+        drawBoundaryLine(rightX, 0, rightX, CANVAS_SIZE);
     }
 
     if (viewport.top === 0) {
-        drawBoundaryLine(0, 0, CANVAS_SIZE, 0);
+        const topY = worldToScreen({ x: 0, y: 0 }, viewport).y;
+        drawBoundaryLine(0, topY, CANVAS_SIZE, topY);
     }
 
     if (viewport.bottom === BOARD_SIZE) {
-        drawBoundaryLine(0, CANVAS_SIZE, CANVAS_SIZE, CANVAS_SIZE);
+        const bottomY = worldToScreen({ x: 0, y: BOARD_SIZE }, viewport).y;
+        drawBoundaryLine(0, bottomY, CANVAS_SIZE, bottomY);
     }
 
     context.restore();
@@ -1072,7 +1108,7 @@ function drawBullets(viewport) {
             continue;
         }
 
-        const screenPosition = worldToScreen(bullet, viewport);
+        const screenPosition = worldToScreen(getRenderedBulletPosition(bullet), viewport);
         const centerX = screenPosition.x + CELL_SIZE / 2;
         const centerY = screenPosition.y + CELL_SIZE / 2;
         drawStar(centerX, centerY, CELL_SIZE * 0.34, CELL_SIZE * 0.16, 5, "#111111");
@@ -1115,8 +1151,10 @@ function drawSnake(snake, viewport) {
         return;
     }
 
-    for (let index = 1; index < snake.segments.length; index += 1) {
-        const segment = snake.segments[index];
+    const renderedSegments = getRenderedSnakeSegments(snake);
+
+    for (let index = 1; index < renderedSegments.length; index += 1) {
+        const segment = renderedSegments[index];
         if (!isInViewport(segment, viewport)) {
             continue;
         }
@@ -1126,7 +1164,7 @@ function drawSnake(snake, viewport) {
         context.fillRect(screenPosition.x + 1, screenPosition.y + 1, CELL_SIZE - 2, CELL_SIZE - 2);
     }
 
-    drawHead(snake.segments[0], snake.direction, viewport, snake.colors.head);
+    drawHead(renderedSegments[0], snake.direction, viewport, snake.colors.head);
 }
 
 function drawHead(head, direction, viewport, color) {
@@ -1248,7 +1286,7 @@ function removeBulletById(id) {
 }
 
 function getNextPosition(position, direction) {
-    const vector = DIRECTION_VECTORS[direction];
+    const vector = resolveMovementVector(direction);
     return {
         x: position.x + vector.x,
         y: position.y + vector.y,
@@ -1287,4 +1325,52 @@ function worldToScreen(position, viewport) {
 
 function clamp(value, min, max) {
     return Math.min(Math.max(value, min), max);
+}
+
+function resolveMovementVector(direction) {
+    if (typeof direction === "string") {
+        return DIRECTION_VECTORS[direction];
+    }
+
+    return direction;
+}
+
+function cloneSegments(segments) {
+    return segments.map((segment) => ({ ...segment }));
+}
+
+function getRenderedSnakeSegments(snake) {
+    if (!snake || snake.segments.length === 0) {
+        return [];
+    }
+
+    const previousSegments = snake.previousSegments?.length ? snake.previousSegments : snake.segments;
+    const fallbackPrevious = previousSegments[previousSegments.length - 1] ?? snake.segments[snake.segments.length - 1];
+    const progress = clamp(snake.moveAccumulator / getSnakeMoveInterval(snake), 0, 1);
+
+    return snake.segments.map((segment, index) => {
+        const from = previousSegments[index] ?? fallbackPrevious;
+        return interpolatePosition(from, segment, progress);
+    });
+}
+
+function getRenderedBulletPosition(bullet) {
+    const previousPosition = {
+        x: bullet.previousX ?? bullet.x,
+        y: bullet.previousY ?? bullet.y,
+    };
+    const currentPosition = { x: bullet.x, y: bullet.y };
+    const progress = clamp(bullet.moveAccumulator / bullet.moveInterval, 0, 1);
+    return interpolatePosition(previousPosition, currentPosition, progress);
+}
+
+function interpolatePosition(from, to, progress) {
+    return {
+        x: from.x + (to.x - from.x) * progress,
+        y: from.y + (to.y - from.y) * progress,
+    };
+}
+
+function getViewportFraction(value) {
+    return value - Math.floor(value);
 }
