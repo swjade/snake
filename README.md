@@ -7,7 +7,8 @@
 - `index.html`：页面入口
 - `styles.css`：页面样式
 - `app.js`：游戏逻辑
-- `requirements.md`：当前需求说明
+- `../Snake.md`：主需求文档
+- `requirements.md`：发布目录中的需求说明副本
 - `.nojekyll`：GitHub Pages 静态资源直出标记
 
 ## 发布到 GitHub Pages
